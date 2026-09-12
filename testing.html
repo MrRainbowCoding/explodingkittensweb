@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exploding Kittens - Web Edition</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
+        }
+        .exploding-glow {
+            animation: pulse-glow 1.5s infinite;
+        }
+        .card-hover:hover {
+            transform: translateY(-8px) scale(1.03);
+        }
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col justify-between select-none">
+
+    <!-- HEADER -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap justify-between items-center shadow-md">
+        <div class="flex items-center space-x-3">
+            <span class="text-3xl">🐱💥</span>
+            <h1 class="text-2xl font-black tracking-wider text-amber-400">EXPLODING KITTENS</h1>
+        </div>
+        
+        <!-- Game Mode Selection & Status -->
+        <div class="flex items-center gap-3">
+            <div class="bg-slate-900 p-1 rounded-lg border border-slate-700 flex items-center text-xs">
+                <button id="mode-ai-btn" onclick="setGameMode('ai')" class="px-3 py-1.5 rounded font-bold transition bg-amber-500 text-slate-900">vs AI</button>
+            </div>
+            <div id="game-status" class="bg-slate-700 px-4 py-2 rounded-full font-bold text-amber-300 border border-slate-600 shadow-inner text-sm">
+                Initializing Game...
+            </div>
+        </div>
+
+        <div>
+            <button onclick="restartGame()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-lg shadow transition transform active:scale-95 flex items-center gap-2">
+                🔄 Restart Game
+            </button>
+        </div>
+    </header>
+
+    <!-- STATS DASHBOARD -->
+    <section class="max-w-5xl w-full mx-auto px-4 py-3 grid grid-cols-2 gap-4">
+        <!-- Player 1 Stats -->
+        <div id="p1-stats-box" class="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex justify-between items-center shadow transition">
+            <div>
+                <h2 id="p1-title" class="font-bold text-lg text-emerald-400">👤 Player 1</h2>
+                <p id="p1-hand-count" class="text-sm text-slate-400">Hand Cards: 5</p>
+                <p class="text-sm text-slate-500 italic">Defuse count hidden</p>
+            </div>
+            <div id="p1-turn-indicator" class="px-3 py-1 bg-slate-700 text-xs font-bold uppercase tracking-wider rounded text-slate-300">
+               Waiting
+            </div>
+        </div>
+        <!-- Player 2 / AI Stats -->
+        <div id="p2-stats-box" class="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex justify-between items-center shadow transition">
+            <div>
+                <h2 id="p2-title" class="font-bold text-lg text-cyan-400">🤖 AI Opponent</h2>
+                <p id="p2-hand-count" class="text-sm text-slate-400">Hand Cards: 5</p>
+                <p class="text-sm text-slate-500 italic">Defuse count hidden</p>
+            </div>
+            <div id="p2-turn-indicator" class="px-3 py-1 bg-slate-700 text-xs font-bold uppercase tracking-wider rounded text-slate-300">
+               Waiting
+            </div>
+        </div>
+    </section>
+
+    <!-- CENTRAL PLAYING FIELD -->
+    <main class="max-w-5xl w-full mx-auto px-4 flex-grow flex flex-col items-center justify-center my-4">
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl w-full p-6 flex flex-col md:flex-row items-center justify-around gap-8 shadow-xl relative overflow-hidden">
+            
+            <!-- Draw Pile -->
+            <div class="flex flex-col items-center">
+                <span class="text-xs uppercase tracking-wider text-slate-400 mb-2 font-bold">Draw Pile (<span id="draw-count">--</span>)</span>
+                <div id="draw-pile" onclick="playerDrawCard()" class="w-32 h-44 bg-gradient-to-br from-amber-600 to-amber-900 border-4 border-amber-400 rounded-xl flex flex-col items-center justify-center cursor-pointer shadow-2xl transition card-hover relative group p-3 text-center">
+                    <img src="assets/cards/card-back.png" alt="Exploding Kittens card back" class="absolute inset-0 w-full h-full object-cover rounded-lg">
+                </div>
+                <button onclick="playerDrawCard()" id="draw-btn" class="mt-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black px-4 py-2 rounded-lg text-sm shadow transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    Draw Card & End Turn
+                </button>
+            </div>
+
+            <!-- Action Status Center -->
+            <div id="field-center-panel" class="flex flex-col items-center text-center max-w-xs">
+                <div class="text-5xl mb-2">🎲</div>
+                <h3 id="current-player-banner" class="font-bold text-amber-400 text-base mb-1">Player 1's Turn</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Play any number of action cards or pass, then draw a card to end your turn.</p>
+                <div id="future-peek-box" class="hidden mt-3 bg-slate-900 border border-amber-500 p-3 rounded-lg w-full text-left">
+                    <p class="text-xs font-bold text-amber-400 mb-1">🔮 Top 3 Cards in Deck:</p>
+                    <ul id="future-list" class="text-xs text-slate-300 space-y-1"></ul>
+                </div>
+            </div>
+
+            <!-- Discard Pile -->
+            <div class="flex flex-col items-center">
+                <span class="text-xs uppercase tracking-wider text-slate-400 mb-2 font-bold">Discard Pile (<span id="discard-count">0</span>)</span>
+                <div id="discard-pile" class="w-32 h-44 bg-slate-700 border-4 border-slate-600 rounded-xl flex flex-col items-center justify-center shadow-inner relative overflow-hidden p-2 text-center">
+                    <img id="discard-top-image" src="assets/cards/card-back.png" alt="Empty discard pile" class="hidden absolute inset-0 w-full h-full object-cover rounded-lg">
+                    <span id="discard-top-icon" class="text-3xl">🗑️</span>
+                    <span id="discard-top-name" class="text-xs font-bold text-slate-300 mt-2 text-center px-1">Empty</span>
+                    <span id="discard-top-flavor" class="text-[9px] text-slate-400 mt-1 italic line-clamp-2"></span>
+                </div>
+                <div class="mt-3 h-9"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- PLAYER HAND CONTAINER -->
+    <footer class="bg-slate-800 border-t border-slate-700 px-4 py-4 shadow-2xl">
+        <div class="max-w-6xl mx-auto flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <h2 id="active-hand-title" class="text-sm font-bold uppercase tracking-wider text-slate-300">Player 1's Hand (<span id="player-hand-size">0</span>)</h2>
+                <div class="flex items-center gap-2">
+                    <select id="test-card-select" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200">
+                        <option value="">Give yourself a card...</option>
+                    </select>
+                    <button onclick="giveTestCard()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-3 py-1 rounded text-xs shadow transition">
+                        Give Card
+                    </button>
+                    <button onclick="simulateExplodingKitten()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-1 rounded text-xs shadow transition">
+                        Simulate Exploding Kitten
+                    </button>
+                    <span class="text-xs text-slate-400">Click a card to play it</span>
+                </div>
+            </div>
+            <div id="player-hand" class="flex items-center gap-3 overflow-x-auto py-2 min-h-[185px]">
+                <!-- Dynamic Hand Cards -->
+            </div>
+        </div>
+    </footer>
+
+    <!-- PASS DEVICE MODAL (Local 2P) -->
+    <div id="intermission-overlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border-2 border-amber-500 rounded-2xl max-w-md w-full p-8 shadow-2xl text-center">
+            <div class="text-6xl mb-4">🔄</div>
+            <h2 id="intermission-title" class="text-3xl font-black text-amber-400 mb-2">PASS THE DEVICE</h2>
+            <p id="intermission-desc" class="text-slate-300 text-sm mb-6">Hand the device to the next player. Keep your cards secret!</p>
+            <button onclick="startNextPlayerTurn()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-black py-3 rounded-xl shadow transition transform active:scale-95">
+                Ready! Start Turn
+            </button>
+        </div>
+    </div>
+
+    <!-- DEFUSE / COMBO / FAVOR MODAL -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div id="modal-content" class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center">
+        </div>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="game-over-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border-2 border-rose-500 rounded-2xl max-w-md w-full p-8 shadow-2xl text-center">
+            <div id="game-over-icon" class="text-6xl mb-4">🏆</div>
+            <h2 id="game-over-title" class="text-3xl font-black text-amber-400 mb-2">VICTORY!</h2>
+            <p id="game-over-desc" class="text-slate-300 text-sm mb-6">Game Over.</p>
+            <button onclick="restartGame()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-3 rounded-xl shadow transition">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        const CARD_TYPES = {
+            EXPLODING_KITTEN: { name: "Exploding Kitten", type: "danger", flavor: "Show this card immediately! Unless you have a Defuse, you are eliminated.", icon: "🐱💥", image: "assets/cards/exploding-kitten.png", bg: "bg-rose-950 border-rose-600 text-rose-100" },
+            DEFUSE: { name: "Defuse", type: "defense", flavor: "Play this when drawing an Exploding Kitten to survive.", icon: "🛠️", image: "assets/cards/defuse.png", bg: "bg-emerald-950 border-emerald-600 text-emerald-100" },
+            ATTACK: { name: "Attack", type: "action", flavor: "End your turn without drawing, forcing next player to take two turns.", icon: "⚡", image: "assets/cards/attack.png", bg: "bg-amber-950 border-amber-600 text-amber-100" },
+            SKIP: { name: "Skip", type: "action", flavor: "End your turn immediately without drawing a card.", icon: "🏃", image: "assets/cards/skip.png", bg: "bg-blue-950 border-blue-600 text-blue-100" },
+            SHUFFLE: { name: "Shuffle", type: "action", flavor: "Randomly shuffle the draw pile.", icon: "🔀", image: "assets/cards/shuffle.png", bg: "bg-purple-950 border-purple-600 text-purple-100" },
+            SEE_THE_FUTURE: { name: "See the Future", type: "action", flavor: "Privately look at the top 3 cards of the draw pile.", icon: "🔮", image: "assets/cards/see-the-future.png", bg: "bg-indigo-950 border-indigo-600 text-indigo-100" },
+            FAVOR: { name: "Favor", type: "action", flavor: "Force another player to give you a card of their choice.", icon: "🤝", image: "assets/cards/favor.png", bg: "bg-pink-950 border-pink-600 text-pink-100" },
+            NOPE: { name: "Nope", type: "action", flavor: "Cancel any action played by another player.", icon: "🛑", image: "assets/cards/nope.png", bg: "bg-red-950 border-red-700 text-red-100" },
+            CAT_BEARD: { name: "Beard Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🧔", image: "assets/cards/beard-cat.png", bg: "bg-orange-950 border-orange-600 text-orange-100" },
+            CAT_TACO: { name: "Tacocat", type: "cat", flavor: "Cat Card (Palindrome). Play pairs or triplets for special combos.", icon: "🌮", image: "assets/cards/tacocat.png", bg: "bg-yellow-950 border-yellow-600 text-yellow-100" },
+            CAT_POTATO: { name: "Hairy Potato Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🥔", image: "assets/cards/hairy-potato-cat.png", bg: "bg-amber-950 border-amber-600 text-amber-100" },
+            CAT_MELON: { name: "Cattermelon", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🍉", image: "assets/cards/cattermelon.png", bg: "bg-emerald-950 border-emerald-600 text-emerald-100" },
+            CAT_RAINBOW: { name: "Rainbow-Ralphing Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🌈", image: "assets/cards/rainbow-cat.png", bg: "bg-cyan-950 border-cyan-600 text-cyan-100" }
+        };
+        const NOPEABLE_ACTIONS = new Set(['Favor', 'Pair', 'ThreeOfAKind']);
+
+        let gameMode = 'ai'; // 'ai' or 'local'
+        let deck = [];
+        let discardPile = [];
+        let p1Hand = [];
+        let p2Hand = [];
+        let p1Defuses = 1;
+        let p2Defuses = 1;
+        let activePlayer = 1;
+        let turnQueueCount = 1;
+        let gameOver = false;
+
+        function setGameMode(mode) {
+            if (mode !== 'ai') return;
+            gameMode = mode;
+            document.getElementById('mode-ai-btn').className = mode === 'ai' ? "px-3 py-1.5 rounded font-bold transition bg-amber-500 text-slate-900" : "px-3 py-1.5 rounded font-bold transition text-slate-300 hover:text-white";
+            
+            document.getElementById('p2-title').innerText = mode === 'ai' ? "🤖 AI Opponent" : "👤 Player 2";
+            restartGame();
+        }
+
+        function populateTestCardSelect() {
+            const select = document.getElementById('test-card-select');
+            Object.values(CARD_TYPES).forEach(card => {
+                if (card.name === 'Exploding Kitten') return;
+                const option = document.createElement('option');
+                option.value = card.name;
+                option.innerText = `${card.icon} ${card.name}`;
+                select.appendChild(option);
+            });
+        }
+
+        function giveTestCard() {
+            const select = document.getElementById('test-card-select');
+            const cardType = Object.values(CARD_TYPES).find(card => card.name === select.value);
+
+            if (!cardType) {
+                setStatus('Choose a card to add to your hand.');
+                return;
+            }
+
+            p1Hand.push({...cardType, id: Math.random()});
+            if (cardType.name === 'Defuse') p1Defuses++;
+            select.value = '';
+            setStatus(`Added ${cardType.name} to your hand for testing.`);
+            updateUI();
+        }
+
+        function simulateExplodingKitten() {
+            if (gameOver || (gameMode === 'ai' && activePlayer === 2)) return;
+
+            const kittenIndex = deck.findIndex(card => card.name === 'Exploding Kitten');
+            const drawnCard = kittenIndex === -1
+                ? {...CARD_TYPES.EXPLODING_KITTEN, id: Math.random()}
+                : deck.splice(kittenIndex, 1)[0];
+            document.getElementById('future-peek-box').classList.add('hidden');
+            resolveDrawnCard(drawnCard);
+        }
+
+        function initFullDeck() {
+            let baseDeck = [];
+            for(let i=0; i<4; i++) baseDeck.push({...CARD_TYPES.ATTACK, id: Math.random()});
+            for(let i=0; i<4; i++) baseDeck.push({...CARD_TYPES.SKIP, id: Math.random()});
+            for(let i=0; i<4; i++) baseDeck.push({...CARD_TYPES.SHUFFLE, id: Math.random()});
+            for(let i=0; i<4; i++) baseDeck.push({...CARD_TYPES.SEE_THE_FUTURE, id: Math.random()});
+            for(let i=0; i<4; i++) baseDeck.push({...CARD_TYPES.FAVOR, id: Math.random()});
+            for(let i=0; i<4; i++) baseDeck.push({...CARD_TYPES.NOPE, id: Math.random()});
+            
+            const cats = [CARD_TYPES.CAT_BEARD, CARD_TYPES.CAT_TACO, CARD_TYPES.CAT_POTATO, CARD_TYPES.CAT_MELON, CARD_TYPES.CAT_RAINBOW];
+            cats.forEach(cat => {
+                for(let j=0; j<4; j++) baseDeck.push({...cat, id: Math.random()});
+            });
+            
+            shuffleArray(baseDeck);
+            return baseDeck;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function restartGame() {
+            gameOver = false;
+            document.getElementById('game-over-overlay').classList.add('hidden');
+            document.getElementById('intermission-overlay').classList.add('hidden');
+            document.getElementById('future-peek-box').classList.add('hidden');
+            
+            deck = initFullDeck();
+            p1Hand = [];
+            p2Hand = [];
+            discardPile = [];
+            p1Defuses = 1;
+            p2Defuses = 1;
+
+            p1Hand.push({...CARD_TYPES.DEFUSE, id: Math.random()});
+            for(let i=0; i<4; i++) {
+                if(deck.length > 0) p1Hand.push(deck.pop());
+            }
+
+            p2Hand.push({...CARD_TYPES.DEFUSE, id: Math.random()});
+            for(let i=0; i<4; i++) {
+                if(deck.length > 0) p2Hand.push(deck.pop());
+            }
+
+            deck.push({...CARD_TYPES.EXPLODING_KITTEN, id: Math.random()});
+            deck.push({...CARD_TYPES.DEFUSE, id: Math.random()});
+            deck.push({...CARD_TYPES.DEFUSE, id: Math.random()});
+            shuffleArray(deck);
+
+            activePlayer = 1;
+            turnQueueCount = 1;
+
+            updateUI();
+            setStatus(gameMode === 'ai' ? "Your turn! Play action cards or draw." : "Player 1's turn!");
+        }
+
+        function setStatus(msg) {
+            document.getElementById('game-status').innerText = msg;
+        }
+
+        function updateUI() {
+            const currentHand = activePlayer === 1 ? p1Hand : p2Hand;
+
+            document.getElementById('draw-count').innerText = deck.length;
+            document.getElementById('discard-count').innerText = discardPile.length;
+            
+            document.getElementById('p1-hand-count').innerText = `Hand Cards: ${p1Hand.length}`;
+            document.getElementById('p2-hand-count').innerText = `Hand Cards: ${p2Hand.length}`;
+
+            const p1Ind = document.getElementById('p1-turn-indicator');
+            const p2Ind = document.getElementById('p2-turn-indicator');
+            const p1Box = document.getElementById('p1-stats-box');
+            const p2Box = document.getElementById('p2-stats-box');
+            const drawBtn = document.getElementById('draw-btn');
+
+            if (activePlayer === 1) {
+                p1Ind.className = "px-3 py-1 bg-emerald-600 text-xs font-bold uppercase tracking-wider rounded text-white animate-pulse";
+                p1Ind.innerText = `Turn (${turnQueueCount} left)`;
+                p1Box.className = "bg-slate-800 border-2 border-emerald-500 rounded-xl p-4 flex justify-between items-center shadow";
+                
+                p2Ind.className = "px-3 py-1 bg-slate-700 text-xs font-bold uppercase tracking-wider rounded text-slate-300";
+                p2Ind.innerText = "Waiting";
+                p2Box.className = "bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex justify-between items-center shadow";
+                drawBtn.disabled = false;
+            } else {
+                p2Ind.className = "px-3 py-1 bg-cyan-600 text-xs font-bold uppercase tracking-wider rounded text-white animate-pulse";
+                p2Ind.innerText = `Turn (${turnQueueCount} left)`;
+                p2Box.className = "bg-slate-800 border-2 border-cyan-500 rounded-xl p-4 flex justify-between items-center shadow";
+                
+                p1Ind.className = "px-3 py-1 bg-slate-700 text-xs font-bold uppercase tracking-wider rounded text-slate-300";
+                p1Ind.innerText = "Waiting";
+                p1Box.className = "bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex justify-between items-center shadow";
+                drawBtn.disabled = (gameMode === 'ai');
+            }
+
+            const p2Name = gameMode === 'ai' ? "AI" : "Player 2";
+            document.getElementById('current-player-banner').innerText = activePlayer === 1 ? "Player 1's Turn" : `${p2Name}'s Turn`;
+            document.getElementById('active-hand-title').innerText = activePlayer === 1 ? `Player 1's Hand (${currentHand.length})` : `${p2Name}'s Hand (${currentHand.length})`;
+
+            if (discardPile.length > 0) {
+                const top = discardPile[discardPile.length - 1];
+                const discardImage = document.getElementById('discard-top-image');
+                discardImage.src = top.image;
+                discardImage.alt = top.name;
+                discardImage.classList.remove('hidden');
+                document.getElementById('discard-top-icon').classList.add('hidden');
+                document.getElementById('discard-top-name').classList.add('hidden');
+                document.getElementById('discard-top-flavor').classList.add('hidden');
+                document.getElementById('discard-top-icon').innerText = top.icon;
+                document.getElementById('discard-top-name').innerText = top.name;
+                document.getElementById('discard-top-flavor').innerText = top.flavor;
+            } else {
+                document.getElementById('discard-top-image').classList.add('hidden');
+                document.getElementById('discard-top-icon').classList.remove('hidden');
+                document.getElementById('discard-top-name').classList.remove('hidden');
+                document.getElementById('discard-top-flavor').classList.remove('hidden');
+                document.getElementById('discard-top-icon').innerText = '🗑️';
+                document.getElementById('discard-top-name').innerText = 'Empty';
+                document.getElementById('discard-top-flavor').innerText = '';
+            }
+
+            const handContainer = document.getElementById('player-hand');
+            handContainer.innerHTML = '';
+            
+            if (gameMode === 'ai' && activePlayer === 2) {
+                handContainer.innerHTML = '<div class="text-slate-400 text-sm italic py-6 w-full text-center">AI is thinking and managing its hand...</div>';
+                return;
+            }
+
+            currentHand.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `w-32 h-44 rounded-xl border-2 overflow-hidden cursor-pointer transition shadow-xl ${card.bg} card-hover relative group`;
+                cardEl.innerHTML = `<img src="${card.image}" alt="${card.name}" class="w-full h-full object-cover">`;
+                cardEl.onclick = () => playCard(index);
+                handContainer.appendChild(cardEl);
+            });
+        }
+
+        function playCard(index) {
+            if (gameOver || (gameMode === 'ai' && activePlayer === 2)) return;
+            const currentHand = activePlayer === 1 ? p1Hand : p2Hand;
+            const card = currentHand[index];
+
+            if (card.name === "Defuse") {
+                setStatus("Defuse can only be played when you draw an Exploding Kitten from the deck!");
+                return;
+            }
+
+            if (card.type === 'cat') {
+                const matchingCats = currentHand.filter(c => c.name === card.name);
+                if (matchingCats.length < 2) {
+                    setStatus("Cat cards are powerless on their own! You need at least 2 matching cards to play them as a pair.");
+                    return;
+                }
+                openCatComboModal(card.name);
+                return;
+            }
+
+            currentHand.splice(index, 1);
+            discardPile.push(card);
+
+            if (card.name === "Attack") {
+                turnQueueCount = 0;
+                setStatus(`Player ${activePlayer} played Attack! Next player takes two turns.`);
+                endTurnSequence(2);
+                return;
+            } else if (card.name === "Skip") {
+                turnQueueCount--;
+                setStatus(`Player ${activePlayer} played Skip! Turn ended.`);
+                if (turnQueueCount <= 0) {
+                    endTurnSequence(1);
+                    return;
+                }
+            } else if (card.name === "Shuffle") {
+                shuffleArray(deck);
+                setStatus(`Player ${activePlayer} randomly shuffled the draw pile.`);
+            } else if (card.name === "See the Future") {
+                showSeeTheFutureModal();
+            } else if (card.name === "Favor") {
+                initiateTargetedAction('Favor', null);
+            } else if (card.name === "Nope") {
+                setStatus(`Player ${activePlayer} played Nope! Action canceled.`);
+            }
+
+            updateUI();
+        }
+
+        function openCatComboModal(catName) {
+            const currentHand = activePlayer === 1 ? p1Hand : p2Hand;
+            const count = currentHand.filter(c => c.name === catName).length;
+
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            
+            let html = `
+                <div class="text-5xl mb-2">🐱</div>
+                <h3 class="text-2xl font-black text-amber-400 mb-2">CAT COMBO DETECTED</h3>
+                <p class="text-sm text-slate-300 mb-4">You have matching ${catName} cards. How would you like to play them?</p>
+                <div class="flex flex-col gap-2">
+                    <button onclick="executeCatComboSelection('${catName}', 2)" class="bg-amber-600 hover:bg-amber-500 font-bold py-2 rounded-lg text-white shadow">Play Pair (Steal random card)</button>
+            `;
+            if (count >= 3) {
+                html += `<button onclick="executeCatComboSelection('${catName}', 3)" class="bg-purple-600 hover:bg-purple-500 font-bold py-2 rounded-lg text-white shadow">Play Three of a Kind (Name any card including Defuse)</button>`;
+            }
+            html += `<button onclick="closeModal()" class="bg-slate-700 hover:bg-slate-600 font-bold py-2 rounded-lg text-slate-300 shadow mt-2">Cancel</button></div>`;
+
+            modalContent.innerHTML = html;
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        function executeCatComboSelection(catName, comboType) {
+            closeModal();
+            const currentHand = activePlayer === 1 ? p1Hand : p2Hand;
+
+            let removedCount = 0;
+            for (let i = currentHand.length - 1; i >= 0 && removedCount < comboType; i--) {
+                if (currentHand[i].name === catName) {
+                    const c = currentHand.splice(i, 1)[0];
+                    discardPile.push(c);
+                    removedCount++;
+                }
+            }
+
+            if (comboType === 2) {
+                initiateTargetedAction('Pair', null);
+            } else if (comboType === 3) {
+                openCardChoiceModal();
+            }
+            updateUI();
+        }
+
+        function initiateTargetedAction(actionType, extraData) {
+            const targetHand = activePlayer === 1 ? p2Hand : p1Hand;
+            const targetName = gameMode === 'ai' ? "AI" : (activePlayer === 1 ? "Player 2" : "Player 1");
+
+            if (targetHand.length === 0) {
+                setStatus(`${targetName} has no cards in hand! Action fails.`);
+                updateUI();
+                return;
+            }
+
+            if (!NOPEABLE_ACTIONS.has(actionType)) {
+                resolveActionEffect(actionType, extraData);
+                return;
+            }
+
+            let opponentHasNope = targetHand.some(c => c.name === "Nope");
+            
+            if (opponentHasNope && gameMode === 'ai') {
+                if (Math.random() > 0.4) {
+                    const nopeIdx = targetHand.findIndex(c => c.name === "Nope");
+                    targetHand.splice(nopeIdx, 1);
+                    discardPile.push(CARD_TYPES.NOPE);
+                    setStatus(`AI played NOPE! Your ${actionType} was canceled.`);
+                    updateUI();
+                    return;
+                }
+            }
+
+            if (gameMode === 'local' && opponentHasNope) {
+                showNopePrompt(actionType, extraData);
+                return;
+            }
+
+            resolveActionEffect(actionType, extraData);
+        }
+
+        function showNopePrompt(actionType, extraData) {
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            const opponentNum = activePlayer === 1 ? 2 : 1;
+
+            let timeLeft = 5;
+            modalContent.innerHTML = `
+                <div class="text-5xl mb-2">🛑</div>
+                <h3 class="text-2xl font-black text-rose-500 mb-2">NOPE WINDOW!</h3>
+                <p class="text-sm text-slate-300 mb-4">Player ${opponentNum}, do you want to play a Nope card?</p>
+                <div id="nope-timer" class="text-amber-400 font-bold mb-4">Auto-proceeding in ${timeLeft}s...</div>
+                <div class="flex flex-col gap-2">
+                    <button onclick="triggerNopeAction(${activePlayer === 1 ? 2 : 1}, '${actionType}', ${JSON.stringify(extraData)})" class="bg-rose-600 hover:bg-rose-500 font-bold py-2 rounded-lg text-white shadow">Play Nope Card</button>
+                    <button onclick="skipNopeAction('${actionType}', ${JSON.stringify(extraData)})" class="bg-slate-700 hover:bg-slate-600 font-bold py-2 rounded-lg text-slate-300 shadow">Allow Action</button>
+                </div>
+            `;
+            modalOverlay.classList.remove('hidden');
+
+            window.nopeTimerInterval = setInterval(() => {
+                timeLeft--;
+                const timerEl = document.getElementById('nope-timer');
+                if (timerEl) timerEl.innerText = `Auto-proceeding in ${timeLeft}s...`;
+                if (timeLeft <= 0) {
+                    clearInterval(window.nopeTimerInterval);
+                    skipNopeAction(actionType, extraData);
+                }
+            }, 1000);
+        }
+
+        function triggerNopeAction(nopePlayerNum, actionType, extraData) {
+            clearInterval(window.nopeTimerInterval);
+            closeModal();
+            const hand = nopePlayerNum === 1 ? p1Hand : p2Hand;
+            const nopeIdx = hand.findIndex(c => c.name === "Nope");
+            if (nopeIdx !== -1) {
+                hand.splice(nopeIdx, 1);
+                discardPile.push(CARD_TYPES.NOPE);
+                setStatus(`Player ${nopePlayerNum} played NOPE! Action canceled.`);
+            } else {
+                setStatus(`Player ${nopePlayerNum} tried to Nope but had no Nope card! Action proceeds.`);
+                resolveActionEffect(actionType, extraData);
+            }
+            updateUI();
+        }
+
+        function skipNopeAction(actionType, extraData) {
+            clearInterval(window.nopeTimerInterval);
+            closeModal();
+            resolveActionEffect(actionType, extraData);
+        }
+
+        function resolveActionEffect(actionType, extraData) {
+            const currentHand = activePlayer === 1 ? p1Hand : p2Hand;
+            const targetHand = activePlayer === 1 ? p2Hand : p1Hand;
+            const targetName = gameMode === 'ai' ? "AI" : (activePlayer === 1 ? "Player 2" : "Player 1");
+
+            if (actionType === 'Favor' || actionType === 'Pair') {
+                if (gameMode === 'ai') {
+                    // AI card selection: 90% non-defuse, 10% defuse weighted choice
+                    const nonDefuses = targetHand.filter(c => c.name !== "Defuse");
+                    const defuses = targetHand.filter(c => c.name === "Defuse");
+                    
+                    let chosenCard;
+                    const roll = Math.random();
+                    if (roll < 0.9 && nonDefuses.length > 0) {
+                        const idx = Math.floor(Math.random() * nonDefuses.length);
+                        chosenCard = nonDefuses[idx];
+                    } else if (defuses.length > 0) {
+                        const idx = Math.floor(Math.random() * defuses.length);
+                        chosenCard = defuses[idx];
+                    } else {
+                        const idx = Math.floor(Math.random() * targetHand.length);
+                        chosenCard = targetHand[idx];
+                    }
+
+                    const removeIdx = targetHand.indexOf(chosenCard);
+                    targetHand.splice(removeIdx, 1);
+                    currentHand.push(chosenCard);
+                    setStatus(`${targetName} gave you a card.`);
+                    updateUI();
+                } else {
+                    openGiveCardModal(targetHand, targetName, currentHand);
+                }
+            } else if (actionType === 'ThreeOfAKind') {
+                const requestedName = extraData;
+                const foundIdx = targetHand.findIndex(c => c.name === requestedName);
+                if (foundIdx !== -1) {
+                    const taken = targetHand.splice(foundIdx, 1)[0];
+                    currentHand.push(taken);
+                    if (requestedName === "Defuse") {
+                        if (activePlayer === 1) { p1Defuses++; p2Defuses--; }
+                        else { p2Defuses++; p1Defuses--; }
+                    }
+                    setStatus(`Success! ${targetName} handed over the ${requestedName}.`);
+                } else {
+                    setStatus(`${targetName} did not have a ${requestedName}. You get nothing!`);
+                }
+                updateUI();
+            }
+        }
+
+        function openGiveCardModal(targetHand, targetName, currentHand) {
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            const targetPlayerNum = activePlayer === 1 ? 2 : 1;
+
+            let html = `
+                <h3 class="text-xl font-black text-amber-400 mb-2">PLAYER ${targetPlayerNum}: CHOOSE CARD TO GIVE</h3>
+                <p class="text-xs text-slate-300 mb-4">Select a card from your hand to give to Player ${activePlayer}.</p>
+                <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto mb-4 p-1">
+            `;
+            targetHand.forEach((c, idx) => {
+                html += `<button onclick="transferChosenCard(${idx})" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 p-2 rounded text-xs font-bold text-left flex items-center gap-2"><span>${c.icon}</span> <span>${c.name}</span></button>`;
+            });
+            html += `</div>`;
+            modalContent.innerHTML = html;
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function transferChosenCard(cardIdx) {
+            closeModal();
+            const currentHand = activePlayer === 1 ? p1Hand : p2Hand;
+            const targetHand = activePlayer === 1 ? p2Hand : p1Hand;
+            const given = targetHand.splice(cardIdx, 1)[0];
+            currentHand.push(given);
+            setStatus(`Card successfully transferred!`);
+            updateUI();
+        }
+
+        function openCardChoiceModal() {
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            const targetName = gameMode === 'ai' ? "AI" : (activePlayer === 1 ? "Player 2" : "Player 1");
+
+            const allTypes = Object.values(CARD_TYPES).filter(c => c.name !== "Exploding Kitten");
+            
+            let html = `
+                <h3 class="text-xl font-black text-amber-400 mb-2">THREE OF A KIND</h3>
+                <p class="text-xs text-slate-300 mb-4">Choose a specific card to request from ${targetName} (including Defuse!).</p>
+                <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto mb-4 p-1">
+            `;
+            allTypes.forEach(t => {
+                html += `<button onclick="resolveThreeOfAKindSelection('${t.name}')" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 p-2 rounded text-xs font-bold text-left flex items-center gap-2"><span>${t.icon}</span> <span>${t.name}</span></button>`;
+            });
+            html += `</div>`;
+            modalContent.innerHTML = html;
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function resolveThreeOfAKindSelection(requestedName) {
+            closeModal();
+            initiateTargetedAction('ThreeOfAKind', requestedName);
+        }
+
+        function showSeeTheFutureModal() {
+            const peekCount = Math.min(3, deck.length);
+            const topCards = [];
+            for(let i=0; i<peekCount; i++) {
+                topCards.push(deck[deck.length - 1 - i]);
+            }
+
+            const futureList = document.getElementById('future-list');
+            futureList.innerHTML = '';
+            topCards.forEach((c, i) => {
+                const li = document.createElement('li');
+                li.className = "flex items-center gap-2 bg-slate-800 p-1.5 rounded border border-slate-700";
+                li.innerHTML = `<span>${c.icon}</span> <span class="font-bold">${c.name}</span> <span class="text-[10px] text-slate-400">(Top ${i+1})</span>`;
+                futureList.appendChild(li);
+            });
+            document.getElementById('future-peek-box').classList.remove('hidden');
+        }
+
+        function playerDrawCard() {
+            if (gameOver || (gameMode === 'ai' && activePlayer === 2)) return;
+            document.getElementById('future-peek-box').classList.add('hidden');
+
+            if (deck.length === 0) {
+                triggerWin("Draw pile empty! Game Over.", null);
+                return;
+            }
+
+            const drawnCard = deck.pop();
+            resolveDrawnCard(drawnCard);
+        }
+
+        function resolveDrawnCard(drawnCard) {
+            if (drawnCard.name === "Exploding Kitten") {
+                const defuses = activePlayer === 1 ? p1Defuses : p2Defuses;
+                if (defuses > 0) {
+                    if (activePlayer === 1) p1Defuses--; else p2Defuses--;
+                    discardPile.push(drawnCard);
+                    updateUI();
+                    openDefuseModal();
+                } else {
+                    discardPile.push(drawnCard);
+                    updateUI();
+                    const winner = activePlayer === 1 ? (gameMode === 'ai' ? "AI" : "Player 2") : "Player 1";
+                    triggerWin(`Player ${activePlayer} exploded! ${winner} wins the game!`, activePlayer !== 1);
+                }
+            } else {
+                const currentHand = activePlayer === 1 ? p1Hand : p2Hand;
+                currentHand.push(drawnCard);
+                setStatus(`Player ${activePlayer} drew a card. Turn ends.`);
+                turnQueueCount--;
+                if (turnQueueCount <= 0) {
+                    endTurnSequence(1);
+                } else {
+                    updateUI();
+                }
+            }
+        }
+
+        function openDefuseModal() {
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalContent = document.getElementById('modal-content');
+            
+            modalContent.innerHTML = `
+                <div class="text-5xl mb-2">🛠️</div>
+                <h3 class="text-2xl font-black text-emerald-400 mb-2">EXPLODING KITTEN DRAWN!</h3>
+                <p class="text-sm text-slate-300 mb-4">You successfully played a Defuse card! Choose where you want to place the Exploding Kitten back into the draw pile:</p>
+                <div class="flex flex-col gap-2">
+                    <button onclick="reinsertKitten('top')" class="bg-amber-600 hover:bg-amber-500 font-bold py-2 rounded-lg text-white shadow">Top (give it to the next player)</button>
+                    <button onclick="reinsertKitten('random')" class="bg-purple-600 hover:bg-purple-500 font-bold py-2 rounded-lg text-white shadow">Random</button>
+                    <button onclick="reinsertKitten('bottom')" class="bg-slate-700 hover:bg-slate-600 font-bold py-2 rounded-lg text-slate-300 shadow">Bottom</button>
+                </div>
+            `;
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function reinsertKitten(position) {
+            const kitten = {...CARD_TYPES.EXPLODING_KITTEN, id: Math.random()};
+            if (position === 'top') {
+                deck.push(kitten);
+            } else if (position === 'bottom') {
+                deck.unshift(kitten);
+            } else {
+                const randomIdx = Math.floor(Math.random() * (deck.length + 1));
+                deck.splice(randomIdx, 0, kitten);
+            }
+
+            document.getElementById('modal-overlay').classList.add('hidden');
+            setStatus(`Exploding Kitten secretly reinserted into draw pile position: ${position}.`);
+            
+            turnQueueCount--;
+            if (turnQueueCount <= 0) {
+                endTurnSequence(1);
+            } else {
+                updateUI();
+            }
+        }
+
+        function endTurnSequence(nextTurnsCount) {
+            if (gameMode === 'ai') {
+                activePlayer = 2;
+                turnQueueCount = nextTurnsCount;
+                updateUI();
+                setTimeout(runAiTurn, 1500);
+            } else {
+                const nextPlayer = activePlayer === 1 ? 2 : 1;
+                document.getElementById('intermission-title').innerText = `PASS TO PLAYER ${nextPlayer}`;
+                document.getElementById('intermission-desc').innerText = `Turn ended. Hand device to Player ${nextPlayer}. Keep cards secret!`;
+                document.getElementById('intermission-overlay').classList.add('hidden');
+                activePlayer = nextPlayer;
+                turnQueueCount = nextTurnsCount;
+                updateUI();
+                setStatus(`Player ${activePlayer}'s turn started!`);
+            }
+        }
+
+        function startNextPlayerTurn() {
+            document.getElementById('intermission-overlay').classList.add('hidden');
+            updateUI();
+        }
+
+        function runAiTurn() {
+            if (gameOver) return;
+            setStatus("AI is taking its turn...");
+
+            setTimeout(() => {
+                if (p2Hand.length > 0 && Math.random() > 0.5) {
+                    const cardIdx = Math.floor(Math.random() * p2Hand.length);
+                    const aiPlayed = p2Hand.splice(cardIdx, 1)[0];
+                    discardPile.push(aiPlayed);
+                    setStatus(`AI played ${aiPlayed.name}!`);
+                    if (aiPlayed.name === "Shuffle") shuffleArray(deck);
+                }
+
+                setTimeout(() => {
+                    if (deck.length === 0) {
+                        triggerWin("Draw pile empty!", true);
+                        return;
+                    }
+
+                    const aiDrawn = deck.pop();
+                    if (aiDrawn.name === "Exploding Kitten") {
+                        if (p2Defuses > 0) {
+                            p2Defuses--;
+                            discardPile.push(aiDrawn);
+                            discardPile.push({...CARD_TYPES.DEFUSE, id: Math.random()});
+                            deck.push(aiDrawn);
+                            setStatus("AI drew an Exploding Kitten, defused it, and put it on top of the deck!");
+                        } else {
+                            discardPile.push(aiDrawn);
+                            triggerWin("AI drew an Exploding Kitten without a Defuse and exploded! Player 1 wins!", true);
+                            return;
+                        }
+                    } else {
+                        p2Hand.push(aiDrawn);
+                        setStatus("AI drew a card and ended its turn.");
+                    }
+
+                    activePlayer = 1;
+                    turnQueueCount = 1;
+                    updateUI();
+                    setStatus("Your turn! Play action cards or draw.");
+                }, 1000);
+            }, 1000);
+        }
+
+        function triggerWin(msg, playerWon) {
+            gameOver = true;
+            document.getElementById('game-over-icon').innerText = playerWon === null ? '🏁' : (playerWon ? '🏆' : '💥');
+            document.getElementById('game-over-title').innerText = playerWon === null ? 'GAME OVER' : (playerWon ? 'VICTORY!' : 'DEFEAT');
+            document.getElementById('game-over-desc').innerText = msg;
+            document.getElementById('game-over-overlay').classList.remove('hidden');
+        }
+
+        window.onload = () => {
+            populateTestCardSelect();
+            setGameMode('ai');
+        };
+    </script>
+</body>
+</html>

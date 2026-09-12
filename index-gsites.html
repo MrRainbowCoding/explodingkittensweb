@@ -92,7 +92,7 @@
             <div class="flex flex-col items-center">
                 <span class="text-xs uppercase tracking-wider text-slate-400 mb-2 font-bold">Draw Pile (<span id="draw-count">--</span>)</span>
                 <div id="draw-pile" onclick="playerDrawCard()" class="w-32 h-44 bg-gradient-to-br from-amber-600 to-amber-900 border-4 border-amber-400 rounded-xl flex flex-col items-center justify-center cursor-pointer shadow-2xl transition card-hover relative group p-3 text-center">
-                    <img src="assets/cards/card-back.png" alt="Exploding Kittens card back" class="absolute inset-0 w-full h-full object-cover rounded-lg">
+                    <img src="https://raw.githubusercontent.com/MrRainbowCoding/explodingkittensweb/refs/heads/main/assets/cards/card-back.png" alt="Exploding Kittens card back" class="absolute inset-0 w-full h-full object-cover rounded-lg">
                 </div>
                 <button onclick="playerDrawCard()" id="draw-btn" class="mt-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black px-4 py-2 rounded-lg text-sm shadow transition disabled:opacity-50 disabled:cursor-not-allowed">
                     Draw Card & End Turn
@@ -114,7 +114,7 @@
             <div class="flex flex-col items-center">
                 <span class="text-xs uppercase tracking-wider text-slate-400 mb-2 font-bold">Discard Pile (<span id="discard-count">0</span>)</span>
                 <div id="discard-pile" class="w-32 h-44 bg-slate-700 border-4 border-slate-600 rounded-xl flex flex-col items-center justify-center shadow-inner relative overflow-hidden p-2 text-center">
-                    <img id="discard-top-image" src="assets/cards/card-back.png" alt="Empty discard pile" class="hidden absolute inset-0 w-full h-full object-cover rounded-lg">
+                    <img id="discard-top-image" src="https://raw.githubusercontent.com/MrRainbowCoding/explodingkittensweb/refs/heads/main/assets/cards/card-back.png" alt="Empty discard pile" class="hidden absolute inset-0 w-full h-full object-cover rounded-lg">
                     <span id="discard-top-icon" class="text-3xl">🗑️</span>
                     <span id="discard-top-name" class="text-xs font-bold text-slate-300 mt-2 text-center px-1">Empty</span>
                     <span id="discard-top-flavor" class="text-[9px] text-slate-400 mt-1 italic line-clamp-2"></span>
@@ -170,7 +170,7 @@
 
     <!-- JAVASCRIPT GAME LOGIC -->
     <script>
-        const CARD_ASSET_BASE_URL = 'assets/cards/';
+        const CARD_ASSET_BASE_URL = 'https://raw.githubusercontent.com/MrRainbowCoding/explodingkittensweb/refs/heads/main/assets/cards/';
         const CARD_TYPES = {
             EXPLODING_KITTEN: { name: "Exploding Kitten", type: "danger", flavor: "Show this card immediately! Unless you have a Defuse, you are eliminated.", icon: "🐱💥", image: `${CARD_ASSET_BASE_URL}exploding-kitten.png`, bg: "bg-rose-950 border-rose-600 text-rose-100" },
             DEFUSE: { name: "Defuse", type: "defense", flavor: "Play this when drawing an Exploding Kitten to survive.", icon: "🛠️", image: `${CARD_ASSET_BASE_URL}defuse.png`, bg: "bg-emerald-950 border-emerald-600 text-emerald-100" },

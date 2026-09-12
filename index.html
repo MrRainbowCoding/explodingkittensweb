@@ -92,7 +92,7 @@
             <div class="flex flex-col items-center">
                 <span class="text-xs uppercase tracking-wider text-slate-400 mb-2 font-bold">Draw Pile (<span id="draw-count">--</span>)</span>
                 <div id="draw-pile" onclick="playerDrawCard()" class="w-32 h-44 bg-gradient-to-br from-amber-600 to-amber-900 border-4 border-amber-400 rounded-xl flex flex-col items-center justify-center cursor-pointer shadow-2xl transition card-hover relative group p-3 text-center">
-                    <img src="assets/cards/card-back.png" alt="Exploding Kittens card back" class="absolute inset-0 w-full h-full object-cover rounded-lg">
+                    <img src="https://raw.githubusercontent.com/MrRainbowCoding/explodingkittensweb/refs/heads/main/assets/cards/card-back.png" alt="Exploding Kittens card back" class="absolute inset-0 w-full h-full object-cover rounded-lg">
                 </div>
                 <button onclick="playerDrawCard()" id="draw-btn" class="mt-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black px-4 py-2 rounded-lg text-sm shadow transition disabled:opacity-50 disabled:cursor-not-allowed">
                     Draw Card & End Turn
@@ -114,7 +114,7 @@
             <div class="flex flex-col items-center">
                 <span class="text-xs uppercase tracking-wider text-slate-400 mb-2 font-bold">Discard Pile (<span id="discard-count">0</span>)</span>
                 <div id="discard-pile" class="w-32 h-44 bg-slate-700 border-4 border-slate-600 rounded-xl flex flex-col items-center justify-center shadow-inner relative overflow-hidden p-2 text-center">
-                    <img id="discard-top-image" src="assets/cards/card-back.png" alt="Empty discard pile" class="hidden absolute inset-0 w-full h-full object-cover rounded-lg">
+                    <img id="discard-top-image" src="https://raw.githubusercontent.com/MrRainbowCoding/explodingkittensweb/refs/heads/main/assets/cards/card-back.png" alt="Empty discard pile" class="hidden absolute inset-0 w-full h-full object-cover rounded-lg">
                     <span id="discard-top-icon" class="text-3xl">🗑️</span>
                     <span id="discard-top-name" class="text-xs font-bold text-slate-300 mt-2 text-center px-1">Empty</span>
                     <span id="discard-top-flavor" class="text-[9px] text-slate-400 mt-1 italic line-clamp-2"></span>
@@ -170,20 +170,21 @@
 
     <!-- JAVASCRIPT GAME LOGIC -->
     <script>
+        const CARD_ASSET_BASE_URL = 'https://raw.githubusercontent.com/MrRainbowCoding/explodingkittensweb/refs/heads/main/assets/cards/';
         const CARD_TYPES = {
-            EXPLODING_KITTEN: { name: "Exploding Kitten", type: "danger", flavor: "Show this card immediately! Unless you have a Defuse, you are eliminated.", icon: "🐱💥", image: "assets/cards/exploding-kitten.png", bg: "bg-rose-950 border-rose-600 text-rose-100" },
-            DEFUSE: { name: "Defuse", type: "defense", flavor: "Play this when drawing an Exploding Kitten to survive.", icon: "🛠️", image: "assets/cards/defuse.png", bg: "bg-emerald-950 border-emerald-600 text-emerald-100" },
-            ATTACK: { name: "Attack", type: "action", flavor: "End your turn without drawing, forcing next player to take two turns.", icon: "⚡", image: "assets/cards/attack.png", bg: "bg-amber-950 border-amber-600 text-amber-100" },
-            SKIP: { name: "Skip", type: "action", flavor: "End your turn immediately without drawing a card.", icon: "🏃", image: "assets/cards/skip.png", bg: "bg-blue-950 border-blue-600 text-blue-100" },
-            SHUFFLE: { name: "Shuffle", type: "action", flavor: "Randomly shuffle the draw pile.", icon: "🔀", image: "assets/cards/shuffle.png", bg: "bg-purple-950 border-purple-600 text-purple-100" },
-            SEE_THE_FUTURE: { name: "See the Future", type: "action", flavor: "Privately look at the top 3 cards of the draw pile.", icon: "🔮", image: "assets/cards/see-the-future.png", bg: "bg-indigo-950 border-indigo-600 text-indigo-100" },
-            FAVOR: { name: "Favor", type: "action", flavor: "Force another player to give you a card of their choice.", icon: "🤝", image: "assets/cards/favor.png", bg: "bg-pink-950 border-pink-600 text-pink-100" },
-            NOPE: { name: "Nope", type: "action", flavor: "Cancel any action played by another player.", icon: "🛑", image: "assets/cards/nope.png", bg: "bg-red-950 border-red-700 text-red-100" },
-            CAT_BEARD: { name: "Beard Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🧔", image: "assets/cards/beard-cat.png", bg: "bg-orange-950 border-orange-600 text-orange-100" },
-            CAT_TACO: { name: "Tacocat", type: "cat", flavor: "Cat Card (Palindrome). Play pairs or triplets for special combos.", icon: "🌮", image: "assets/cards/tacocat.png", bg: "bg-yellow-950 border-yellow-600 text-yellow-100" },
-            CAT_POTATO: { name: "Hairy Potato Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🥔", image: "assets/cards/hairy-potato-cat.png", bg: "bg-amber-950 border-amber-600 text-amber-100" },
-            CAT_MELON: { name: "Cattermelon", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🍉", image: "assets/cards/cattermelon.png", bg: "bg-emerald-950 border-emerald-600 text-emerald-100" },
-            CAT_RAINBOW: { name: "Rainbow-Ralphing Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🌈", image: "assets/cards/rainbow-cat.png", bg: "bg-cyan-950 border-cyan-600 text-cyan-100" }
+            EXPLODING_KITTEN: { name: "Exploding Kitten", type: "danger", flavor: "Show this card immediately! Unless you have a Defuse, you are eliminated.", icon: "🐱💥", image: `${CARD_ASSET_BASE_URL}exploding-kitten.png`, bg: "bg-rose-950 border-rose-600 text-rose-100" },
+            DEFUSE: { name: "Defuse", type: "defense", flavor: "Play this when drawing an Exploding Kitten to survive.", icon: "🛠️", image: `${CARD_ASSET_BASE_URL}defuse.png`, bg: "bg-emerald-950 border-emerald-600 text-emerald-100" },
+            ATTACK: { name: "Attack", type: "action", flavor: "End your turn without drawing, forcing next player to take two turns.", icon: "⚡", image: `${CARD_ASSET_BASE_URL}attack.png`, bg: "bg-amber-950 border-amber-600 text-amber-100" },
+            SKIP: { name: "Skip", type: "action", flavor: "End your turn immediately without drawing a card.", icon: "🏃", image: `${CARD_ASSET_BASE_URL}skip.png`, bg: "bg-blue-950 border-blue-600 text-blue-100" },
+            SHUFFLE: { name: "Shuffle", type: "action", flavor: "Randomly shuffle the draw pile.", icon: "🔀", image: `${CARD_ASSET_BASE_URL}shuffle.png`, bg: "bg-purple-950 border-purple-600 text-purple-100" },
+            SEE_THE_FUTURE: { name: "See the Future", type: "action", flavor: "Privately look at the top 3 cards of the draw pile.", icon: "🔮", image: `${CARD_ASSET_BASE_URL}see-the-future.png`, bg: "bg-indigo-950 border-indigo-600 text-indigo-100" },
+            FAVOR: { name: "Favor", type: "action", flavor: "Force another player to give you a card of their choice.", icon: "🤝", image: `${CARD_ASSET_BASE_URL}favor.png`, bg: "bg-pink-950 border-pink-600 text-pink-100" },
+            NOPE: { name: "Nope", type: "action", flavor: "Cancel any action played by another player.", icon: "🛑", image: `${CARD_ASSET_BASE_URL}nope.png`, bg: "bg-red-950 border-red-700 text-red-100" },
+            CAT_BEARD: { name: "Beard Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🧔", image: `${CARD_ASSET_BASE_URL}beard-cat.png`, bg: "bg-orange-950 border-orange-600 text-orange-100" },
+            CAT_TACO: { name: "Tacocat", type: "cat", flavor: "Cat Card (Palindrome). Play pairs or triplets for special combos.", icon: "🌮", image: `${CARD_ASSET_BASE_URL}tacocat.png`, bg: "bg-yellow-950 border-yellow-600 text-yellow-100" },
+            CAT_POTATO: { name: "Hairy Potato Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🥔", image: `${CARD_ASSET_BASE_URL}hairy-potato-cat.png`, bg: "bg-amber-950 border-amber-600 text-amber-100" },
+            CAT_MELON: { name: "Cattermelon", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🍉", image: `${CARD_ASSET_BASE_URL}cattermelon.png`, bg: "bg-emerald-950 border-emerald-600 text-emerald-100" },
+            CAT_RAINBOW: { name: "Rainbow-Ralphing Cat", type: "cat", flavor: "Cat Card. Play pairs or triplets for special combos.", icon: "🌈", image: `${CARD_ASSET_BASE_URL}rainbow-cat.png`, bg: "bg-cyan-950 border-cyan-600 text-cyan-100" }
         };
         const NOPEABLE_ACTIONS = new Set(['Favor', 'Pair', 'ThreeOfAKind']);
 

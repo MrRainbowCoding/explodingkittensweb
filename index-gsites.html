@@ -343,6 +343,7 @@
             }
 
             currentHand.forEach((card, index) => {
+                if (activePlayer === 1 && card.name === "Exploding Kitten") return;
                 const cardEl = document.createElement('div');
                 cardEl.className = `w-32 h-44 rounded-xl border-2 overflow-hidden cursor-pointer transition shadow-xl ${card.bg} card-hover relative group`;
                 cardEl.innerHTML = `<img src="${card.image}" alt="${card.name}" class="w-full h-full object-cover">`;
@@ -775,13 +776,14 @@
                     }
 
                     const aiDrawn = deck.pop();
+                    let aiTurnMessage = "Your turn! Play action cards or draw.";
                     if (aiDrawn.name === "Exploding Kitten") {
                         if (p2Defuses > 0) {
                             p2Defuses--;
                             discardPile.push(aiDrawn);
                             discardPile.push({...CARD_TYPES.DEFUSE, id: Math.random()});
                             deck.push(aiDrawn);
-                            setStatus("AI drew an Exploding Kitten, defused it, and put it on top of the deck!");
+                            aiTurnMessage = "AI drew an Exploding Kitten and used a Defuse. Your turn!";
                         } else {
                             discardPile.push(aiDrawn);
                             updateUI();
@@ -796,7 +798,7 @@
                     activePlayer = 1;
                     turnQueueCount = 1;
                     updateUI();
-                    setStatus("Your turn! Play action cards or draw.");
+                    setStatus(aiTurnMessage);
                 }, 1000);
             }, 1000);
         }
